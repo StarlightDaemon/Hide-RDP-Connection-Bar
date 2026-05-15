@@ -2,7 +2,7 @@
 // @id              hide-rdp-connection-bar
 // @name            Hide RDP Connection Bar
 // @description     Hides the Remote Desktop connection bar in fullscreen RDP sessions on Windows 11 24H2 and replaces it with a clean disconnect button. Shows hostname, fades when idle, supports a disconnect hotkey. Multi-monitor aware.
-// @version         1.0.0
+// @version         1.0.1
 // @author          StarlightDaemon
 // @github          https://github.com/StarlightDaemon
 // @include         mstsc.exe
@@ -97,7 +97,7 @@ namespace {
 
 // ── Constants ─────────────────────────────────────────────────────────────
 
-constexpr int  BTN_W           = 120;
+constexpr int  BTN_W           = 80;
 constexpr int  BTN_H           = 56;
 constexpr BYTE ALPHA_FULL      = 230;
 constexpr BYTE ALPHA_FADED     = 35;
