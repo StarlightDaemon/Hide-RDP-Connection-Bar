@@ -2,7 +2,7 @@
 // @id              hide-rdp-connection-bar
 // @name            Hide RDP Connection Bar
 // @description     Hides the Remote Desktop connection bar in fullscreen RDP sessions on Windows 11 24H2 and replaces it with a clean disconnect button. Shows hostname, fades when idle, supports a disconnect hotkey. Multi-monitor aware.
-// @version         1.0.1
+// @version         1.1.0
 // @author          StarlightDaemon
 // @github          https://github.com/StarlightDaemon
 // @include         mstsc.exe
@@ -180,13 +180,15 @@ wchar_t          g_hostname[256]   = {};
 
 // ── Hook originals ────────────────────────────────────────────────────────
 
-using CreateWindowExW_t = decltype(&CreateWindowExW);
-using ShowWindow_t      = decltype(&ShowWindow);
-using SetWindowPos_t    = decltype(&SetWindowPos);
+using CreateWindowExW_t  = decltype(&CreateWindowExW);
+using ShowWindow_t       = decltype(&ShowWindow);
+using SetWindowPos_t     = decltype(&SetWindowPos);
+using SetWindowTextW_t   = decltype(&SetWindowTextW);
 
-CreateWindowExW_t pOrigCreateWindowExW = nullptr;
-ShowWindow_t      pOrigShowWindow      = nullptr;
-SetWindowPos_t    pOrigSetWindowPos    = nullptr;
+CreateWindowExW_t  pOrigCreateWindowExW  = nullptr;
+ShowWindow_t       pOrigShowWindow       = nullptr;
+SetWindowPos_t     pOrigSetWindowPos     = nullptr;
+SetWindowTextW_t   pOrigSetWindowTextW   = nullptr;
 
 // ── Monitor helper ────────────────────────────────────────────────────────
 
@@ -595,6 +597,21 @@ BOOL WINAPI SetWindowPos_Hook(
     return result;
 }
 
+BOOL WINAPI SetWindowTextW_Hook(HWND hWnd, LPCWSTR lpString) {
+    BOOL result = pOrigSetWindowTextW(hWnd, lpString);
+
+    EnterCriticalSection(&g_cs);
+    bool isFrame = (hWnd == g_hRdpFrame);
+    LeaveCriticalSection(&g_cs);
+
+    if (isFrame && g_showButton && g_showHostname) {
+        UpdateHostname();
+        if (g_hBtn && IsWindow(g_hBtn))
+            InvalidateRect(g_hBtn, nullptr, TRUE);
+    }
+    return result;
+}
+
 } // namespace
 
 BOOL Wh_ModInit() {
@@ -616,10 +633,15 @@ BOOL Wh_ModInit() {
         reinterpret_cast<void*>(SetWindowPos_Hook),
         reinterpret_cast<void**>(&pOrigSetWindowPos));
 
+    Wh_SetFunctionHook(
+        reinterpret_cast<void*>(SetWindowTextW),
+        reinterpret_cast<void*>(SetWindowTextW_Hook),
+        reinterpret_cast<void**>(&pOrigSetWindowTextW));
+
     if (g_showButton)
         StartHelperThread();
 
-    Wh_Log(L"Hide RDP Connection Bar v1.0.0 initialized — "
+    Wh_Log(L"Hide RDP Connection Bar v1.1.0 initialized — "
            L"hide=%d button=%d hotkey=%d fade=%d hostname=%d",
            (int)g_hideBar, (int)g_showButton,
            (int)g_enableHotkey, (int)g_fadeWhenIdle, (int)g_showHostname);
