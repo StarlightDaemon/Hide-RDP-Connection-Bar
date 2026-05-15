@@ -1,10 +1,10 @@
 # Hide RDP Connection Bar
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Platform](https://img.shields.io/badge/Windows-11%2024H2-0078D4?logo=windows&logoColor=white)]()
+[![Platform](https://img.shields.io/badge/Windows-11-0078D4?logo=windows&logoColor=white)]()
 [![Windhawk](https://img.shields.io/badge/Windhawk-mod-orange)](https://windhawk.net/)
 
-A [Windhawk](https://windhawk.net/) mod that permanently hides the floating Remote Desktop connection bar in fullscreen sessions on Windows 11. The native options to keep the bar hidden often fail to persist in Windows 11 24H2 — this mod handles it at the process level so it stays gone.
+A [Windhawk](https://windhawk.net/) mod that permanently hides the floating Remote Desktop connection bar in fullscreen sessions on Windows 11. The native options to keep the bar hidden often fail to persist in Windows 11 — this mod handles it at the process level so it stays gone.
 
 Optionally provides a clean, DPI-aware disconnect button pinned to any corner of the screen, complete with idle-fading, hostname display, and a customizable global hotkey. Fully multi-monitor aware.
 
@@ -12,7 +12,7 @@ Optionally provides a clean, DPI-aware disconnect button pinned to any corner of
 
 ## The Problem
 
-The native options to hide the Remote Desktop connection bar are unreliable in Windows 11 24H2. Three mechanisms that may not persist between sessions:
+The native options to hide the Remote Desktop connection bar are unreliable in Windows 11. Three mechanisms that may not persist between sessions:
 
 - The **"Show the connection bar when I use the full screen"** toggle in RDP client options
 - The **pin button** on the connection bar itself
@@ -70,7 +70,7 @@ To temporarily restore the native bar without uninstalling the mod, open Windhaw
 
 - **Ctrl+Alt+Home** — This keyboard shortcut is hardwired into the RDP client to show a menu accessed through the connection bar. With the mod active the bar is hidden immediately after creation, so it may briefly flash into view before being hidden. This is a cosmetic artifact and does not affect functionality.
 - **Settings changes take effect on the next connection** — The mod reads the setting live at window creation time, so toggling the setting mid-session will not affect an already-running session.
-- **Tested on Windows 11 24H2** — Behavior on earlier Windows versions or the Windows App (formerly MSRDC) client is untested.
+- **Tested on Windows 11** — Behavior on earlier Windows versions or the Windows App (formerly MSRDC) client is untested.
 - **Button requires reconnect** — The connection bar is only created when a session starts. If you enable the disconnect button mid-session, you must disconnect and reconnect for it to appear.
 - **Hotkey Conflicts** — If the chosen hotkey is already used by another application, the mod will silently fail to register it at the OS level, but the button will display "✕  Hotkey Failed" to alert you.
 
