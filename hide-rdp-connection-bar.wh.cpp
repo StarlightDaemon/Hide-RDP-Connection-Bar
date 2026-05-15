@@ -7,6 +7,7 @@
 // @github          https://github.com/StarlightDaemon
 // @include         mstsc.exe
 // @compilerOptions -lgdi32 -lshcore
+// @license         MIT
 // ==/WindhawkMod==
 
 // ==WindhawkModReadme==
@@ -239,7 +240,9 @@ void UpdateHostname() {
     wchar_t* sep = wcsstr(title, L" - ");
     if (sep) *sep = L'\0';
 
+    EnterCriticalSection(&g_cs);
     wcsncpy_s(g_hostname, title[0] ? title : L"", _TRUNCATE);
+    LeaveCriticalSection(&g_cs);
     Wh_Log(L"Hostname: %s", g_hostname);
 }
 
@@ -259,18 +262,24 @@ void DisconnectSession(HWND hRef) {
 // ── BBar subclass — cleanup only ─────────────────────────────────────────
 
 LRESULT CALLBACK BBarSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+    WNDPROC origProc;
+    EnterCriticalSection(&g_cs);
+    origProc = g_origBBarWndProc;
+    LeaveCriticalSection(&g_cs);
+
     if (msg == WM_DESTROY) {
-        if (g_origBBarWndProc)
+        if (origProc)
             SetWindowLongPtrW(hwnd, GWLP_WNDPROC,
-                reinterpret_cast<LONG_PTR>(g_origBBarWndProc));
+                reinterpret_cast<LONG_PTR>(origProc));
         EnterCriticalSection(&g_cs);
         g_hBBar           = nullptr;
         g_hRdpFrame       = nullptr;
         g_origBBarWndProc = nullptr;
         LeaveCriticalSection(&g_cs);
     }
-    return g_origBBarWndProc
-        ? CallWindowProcW(g_origBBarWndProc, hwnd, msg, wParam, lParam)
+
+    return origProc
+        ? CallWindowProcW(origProc, hwnd, msg, wParam, lParam)
         : DefWindowProcW(hwnd, msg, wParam, lParam);
 }
 
@@ -320,7 +329,12 @@ LRESULT CALLBACK BtnWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         bool hotkeyConflict = g_enableHotkey && !g_hotkeyRegistered;
         PCWSTR disconnectLabel = hotkeyConflict ? L"✕  Hotkey Failed" : L"✕  Disconnect";
 
-        if (g_showHostname && g_hostname[0]) {
+        wchar_t hostname[256];
+        EnterCriticalSection(&g_cs);
+        wcsncpy_s(hostname, g_hostname, _TRUNCATE);
+        LeaveCriticalSection(&g_cs);
+
+        if (g_showHostname && hostname[0]) {
             // Hostname — small, dimmed, top half
             SetTextColor(hdc, RGB(140, 140, 140));
             HFONT hSmall = CreateFontW(
@@ -329,7 +343,7 @@ LRESULT CALLBACK BtnWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
                 CLEARTYPE_QUALITY, DEFAULT_PITCH, L"Segoe UI");
             HFONT hOld = (HFONT)SelectObject(hdc, hSmall);
             RECT rHost = { rc.left + ScaleX(4), rc.top + ScaleY(5), rc.right - ScaleX(4), rc.top + ScaleY(26) };
-            DrawTextW(hdc, g_hostname, -1, &rHost,
+            DrawTextW(hdc, hostname, -1, &rHost,
                 DT_CENTER | DT_SINGLELINE | DT_VCENTER | DT_END_ELLIPSIS);
             SelectObject(hdc, hOld);
             DeleteObject(hSmall);
