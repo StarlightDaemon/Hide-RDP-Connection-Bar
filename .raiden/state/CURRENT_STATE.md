@@ -17,7 +17,13 @@ Remote Desktop sessions on Windows 11 24H2. Hooks `CreateWindowExW` in
 
 ## Project Status
 
-- Source file: `hide-rdp-connection-bar.wh.cpp` (single-file Windhawk mod)
-- README and LICENSE present
+- Source file: `hide-rdp-connection-bar.wh.cpp` — complete and compilable
+- `README.md`, `LICENSE` (MIT), `.gitignore`, `assets/` placeholder all present
 - No build system, no CI configured
-- Not yet published to Windhawk Marketplace (status unknown at RAIDEN install time)
+- No git commit yet
+- Not yet installed or tested in Windhawk
+- Not yet published to Windhawk Marketplace
+
+## Agent Session — 2026-05-15
+
+RAIDEN orientation completed. State files (WORK_LOG, DECISIONS) populated from session work. Memory saved. No source files changed this session — all work was scaffold creation and RAIDEN orientation.
