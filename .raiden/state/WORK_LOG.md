@@ -61,3 +61,17 @@
 
 **Next:** Obtain GitHub token to push v1.0.0 → Operator live test in Windhawk (focusing on DPI scaling) → Optional marketplace PR.
 
+## 2026-05-15 — v1.0.0 pushed, post-release polish
+
+- v1.0.0 committed and pushed to `StarlightDaemon/Hide-RDP-Connection-Bar` (main)
+- v1.0.1: narrowed disconnect button from 120px to 80px base width following operator feedback
+- Wording pass: softened "native settings are broken" to "may not persist reliably"; replaced "BBar connection bar" with "Remote Desktop connection bar" in all user-facing text; broadened platform references from "Windows 11 24H2" to "Windows 11"
+
+## 2026-05-15 — v1.1.x: hostname fix, full border
+
+- v1.1.0: added `SetWindowTextW` hook — BBar was being created before mstsc set the window title, so `UpdateHostname()` always read "Remote Desktop Connection". Hook now detects title changes on `g_hRdpFrame`, re-parses the hostname, and repaints the button in real time. Also handles reconnect-to-different-host.
+- v1.1.1: added full border outline (left/right/bottom 2px edges in accent colour). Controlled by new `showBorder` toggle (default on). Compiler options, four hooks, all 11 settings documented in README and WindhawkModReadme.
+- Operator live test completed — mod confirmed working. All changes committed and pushed.
+
+**Status:** v1.1.1 live on GitHub. Optional next step: Windhawk Marketplace PR.
+

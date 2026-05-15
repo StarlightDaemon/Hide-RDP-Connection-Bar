@@ -24,9 +24,16 @@ The bar reappears on every connection regardless of these settings.
 
 ## How This Mod Works
 
-The mod hooks `CreateWindowExW` inside `mstsc.exe`. After each window is created, it checks whether the new window's class name is `BBarWindowClass` — the internal class used by the connection bar. If it matches and the mod is enabled, `ShowWindow(hwnd, SW_HIDE)` is called immediately, before the window ever becomes visible.
+The mod hooks four Win32 APIs inside `mstsc.exe`:
 
-The original `CreateWindowExW` call is allowed to complete normally; the bar is hidden after creation rather than blocked. This avoids any risk of destabilizing the RDP client.
+- **`CreateWindowExW`** — detects when the connection bar window (`BBarWindowClass`) is created, records the bar and RDP frame handles, and hides it immediately if enabled
+- **`ShowWindow`** — suppresses any subsequent attempt by mstsc to make the bar visible again
+- **`SetWindowPos`** — strips the `SWP_SHOWWINDOW` flag from bar position calls, and detects when the RDP frame moves to a different monitor so the disconnect button can reposition
+- **`SetWindowTextW`** — detects when mstsc updates its window title (which contains the remote hostname) and refreshes the button label in real time
+
+All original calls are allowed to complete normally — the mod intercepts after the fact rather than blocking. This avoids any risk of destabilizing the RDP client.
+
+The disconnect button is a separate floating window (`WS_POPUP | WS_EX_LAYERED | WS_EX_TOPMOST`) created on a dedicated helper thread, pinned to whichever corner you choose on the monitor hosting the RDP session.
 
 ---
 
@@ -56,7 +63,8 @@ The original `CreateWindowExW` call is allowed to complete normally; the bar is 
 | `buttonPosition` | Dropdown | `top-right` | Which corner of the RDP monitor to place the button. |
 | `offsetPreset` | Dropdown | `medium` | How far to nudge the button away from the corner. Use Custom offset to override with an exact value. |
 | `offsetCustom` | Number | `0` | Exact pixel offset. Overrides Corner offset when non-zero. |
-| `showHostname` | Boolean | `true` | Displays the remote host name above the disconnect label. |
+| `showBorder` | Boolean | `true` | Draws a full outline around the button. Turn off for top-accent-only style. |
+| `showHostname` | Boolean | `true` | Displays the remote hostname above the disconnect label, updated live as mstsc resolves it. |
 | `fadeWhenIdle` | Boolean | `false` | Fades the button to near-invisible after a few seconds of no hover. Brightens when you move the mouse over it. |
 | `enableHotkey` | Boolean | `false` | Keyboard shortcut to disconnect without clicking the button. Provides visual feedback if the hotkey fails to register. |
 | `hotkeyModifier` | Dropdown | `ctrl-alt` | Modifier keys held for the hotkey. Only used when hotkey is enabled. |

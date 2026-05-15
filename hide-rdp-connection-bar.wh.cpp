@@ -13,22 +13,23 @@
 /*
 # Hide RDP Connection Bar
 
-Hides the floating Remote Desktop connection bar in fullscreen sessions
-on Windows 11, where the native options to hide the bar may not persist reliably.
+Hides the floating Remote Desktop connection bar in fullscreen sessions on
+Windows 11, where the native options to hide the bar may not persist reliably.
 
 Optionally shows a clean disconnect button pinned to any corner of the screen:
 
-- Displays the remote hostname above the disconnect label
+- Displays the remote hostname above the disconnect label, updated live
+- Full border outline for visibility, or top-accent-only — your choice
 - Fades to near-invisible when idle, brightens on hover
-- Supports a configurable keyboard hotkey to disconnect without touching the mouse
+- Configurable keyboard hotkey to disconnect without touching the mouse
 - Follows the RDP window if moved to a different monitor
-
-Fully multi-monitor aware.
+- DPI-aware — scales correctly on 4K and HiDPI displays
 
 ## Note
 
 If the disconnect button does not appear after enabling it, close and reopen
-the Remote Desktop connection.
+the Remote Desktop connection. The button is created when the session starts;
+it cannot appear for a session that is already running.
 */
 // ==/WindhawkModReadme==
 

@@ -17,21 +17,22 @@ Remote Desktop sessions on Windows 11 24H2. Hooks `CreateWindowExW` in
 
 ## Project Status
 
-- Source file: `hide-rdp-connection-bar.wh.cpp` — v1.0.0, complete and compilable
+- Source file: `hide-rdp-connection-bar.wh.cpp` — v1.1.1, complete and compilable
 - `README.md`, `LICENSE` (MIT), `.gitignore`, `assets/` placeholder all present
 - No build system, no CI configured
 - **Pushed to GitHub** — `main` branch live at `StarlightDaemon/Hide-RDP-Connection-Bar`
-- Not yet installed or tested in Windhawk — operator live test pending
+- **Operator live test passed** — confirmed working on Windows 11
 - Not yet published to Windhawk Marketplace
 
-## v1.0.0 feature set
+## v1.1.1 feature set
 
-- Hide native BBar (`hideBar`) — three-hook approach (CreateWindowExW, ShowWindow, SetWindowPos)
-- Disconnect button (`showButton`) — 120×56px floating overlay, WS_POPUP|WS_EX_LAYERED|WS_EX_TOPMOST
-- Four-corner positioning (`buttonPosition`) + preset and custom pixel offsets
-- Hostname display (`showHostname`) — parsed from mstsc window title
+- Hide native connection bar (`hideBar`) — four hooks: CreateWindowExW, ShowWindow, SetWindowPos, SetWindowTextW
+- Disconnect button (`showButton`) — 80×56px floating overlay, WS_POPUP|WS_EX_LAYERED|WS_EX_TOPMOST
+- Four-corner positioning (`buttonPosition`) + seven preset and custom pixel offsets
+- Full border outline (`showBorder`) — 2px accent-colour edges on all four sides; toggle off for top-only style
+- Live hostname display (`showHostname`) — updated via SetWindowTextW hook as mstsc resolves the title
 - Fade on idle (`fadeWhenIdle`) — 4s timer, ALPHA_FADED=35, restores on hover
 - Disconnect hotkey (`enableHotkey`) — RegisterHotKey with modifier + key dropdowns; visual "Hotkey Failed" label on conflict
-- DPI-aware sizing — GetDpiForMonitor scales BTN_W, BTN_H, offsets, fonts, corner radius
+- DPI-aware sizing — GetDpiForMonitor scales button size, offsets, fonts, corner radius
 - Multi-monitor aware — MonitorFromWindow; repositions on frame monitor change
 - Helper thread owns button window; CRITICAL_SECTION guards shared HWNDs
