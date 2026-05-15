@@ -2,7 +2,7 @@
 // @id              hide-rdp-connection-bar
 // @name            Hide RDP Connection Bar
 // @description     Hides the Remote Desktop connection bar in fullscreen RDP sessions on Windows 11 24H2 and replaces it with a clean disconnect button. Shows hostname, fades when idle, supports a disconnect hotkey. Multi-monitor aware.
-// @version         1.1.0
+// @version         1.1.1
 // @author          StarlightDaemon
 // @github          https://github.com/StarlightDaemon
 // @include         mstsc.exe
@@ -62,6 +62,9 @@ the Remote Desktop connection.
 - offsetCustom: 0
   $name: Custom offset (pixels)
   $description: Exact pixel offset. Overrides Corner offset when non-zero.
+- showBorder: true
+  $name: Show full border
+  $description: Draws a full outline around the button. Turn off for top-accent-only style.
 - showHostname: true
   $name: Show hostname on button
   $description: Displays the remote host name above the disconnect label.
@@ -114,6 +117,7 @@ bool g_showButton     = false;
 bool g_buttonOnRight  = true;
 bool g_buttonAtBottom = false;
 int  g_buttonOffset   = 32;
+bool g_showBorder     = true;
 bool g_showHostname   = true;
 bool g_fadeWhenIdle   = false;
 bool g_enableHotkey   = false;
@@ -124,6 +128,7 @@ UINT g_hotkeyVk       = 'D';
 void LoadSettings() {
     g_hideBar      = Wh_GetIntSetting(L"hideBar")      != 0;
     g_showButton   = Wh_GetIntSetting(L"showButton")   != 0;
+    g_showBorder   = Wh_GetIntSetting(L"showBorder")   != 0;
     g_showHostname = Wh_GetIntSetting(L"showHostname") != 0;
     g_fadeWhenIdle = Wh_GetIntSetting(L"fadeWhenIdle") != 0;
     g_enableHotkey = Wh_GetIntSetting(L"enableHotkey") != 0;
@@ -295,10 +300,18 @@ LRESULT CALLBACK BtnWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         FillRect(hdc, &rc, hbrBg);
         DeleteObject(hbrBg);
 
-        // Blue top accent
-        RECT accent = { rc.left, rc.top, rc.right, rc.top + ScaleY(3) };
+        // Blue accent / border
         HBRUSH hbrAccent = CreateSolidBrush(RGB(0, 120, 212));
+        RECT accent = { rc.left, rc.top, rc.right, rc.top + ScaleY(3) };
         FillRect(hdc, &accent, hbrAccent);
+        if (g_showBorder) {
+            RECT left   = { rc.left,           rc.top, rc.left  + ScaleX(2), rc.bottom };
+            RECT right  = { rc.right - ScaleX(2), rc.top, rc.right,          rc.bottom };
+            RECT bottom = { rc.left, rc.bottom - ScaleY(2), rc.right,        rc.bottom };
+            FillRect(hdc, &left,   hbrAccent);
+            FillRect(hdc, &right,  hbrAccent);
+            FillRect(hdc, &bottom, hbrAccent);
+        }
         DeleteObject(hbrAccent);
 
         SetBkMode(hdc, TRANSPARENT);
@@ -641,7 +654,7 @@ BOOL Wh_ModInit() {
     if (g_showButton)
         StartHelperThread();
 
-    Wh_Log(L"Hide RDP Connection Bar v1.1.0 initialized — "
+    Wh_Log(L"Hide RDP Connection Bar v1.1.1 initialized — "
            L"hide=%d button=%d hotkey=%d fade=%d hostname=%d",
            (int)g_hideBar, (int)g_showButton,
            (int)g_enableHotkey, (int)g_fadeWhenIdle, (int)g_showHostname);
