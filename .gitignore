@@ -1,0 +1,42 @@
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# C / C++
+*.o
+*.obj
+*.exe
+*.dll
+*.pdb
+*.ilk
+*.exp
+*.lib
+*.map
+*.suo
+*.user
+*.ncb
+*.sdf
+*.opensdf
+*.VC.db
+*.VC.opendb
+
+# Visual Studio
+.vs/
+*.vcxproj.user
+ipch/
+x64/
+x86/
+Debug/
+Release/
+
+# Build artifacts
+build/
+out/
+
+# Editor
+.vscode/
+*.swp
+*~
