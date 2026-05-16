@@ -20,8 +20,9 @@ Remote Desktop sessions on Windows 11 24H2. Hooks `CreateWindowExW` in
 - Source file: `hide-rdp-connection-bar.wh.cpp` — v1.1.1, complete and compilable
 - `README.md`, `LICENSE` (MIT), `.gitignore`, `assets/` placeholder all present
 - No build system, no CI configured
-- **Pushed to GitHub** — `main` branch live at `StarlightDaemon/Hide-RDP-Connection-Bar`
+- **Pushed to GitHub** — `main` branch live at `StarlightDaemon/Hide-RDP-Connection-Bar` (10 commits, HEAD `3b18b83`)
 - **Operator live test passed** — confirmed working on Windows 11
+- **Pre-submission review completed** — three bugs fixed (see Work Log 2026-05-15 review session)
 - Not yet published to Windhawk Marketplace
 
 ## v1.1.1 feature set

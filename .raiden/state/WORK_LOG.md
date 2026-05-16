@@ -75,3 +75,13 @@
 
 **Status:** v1.1.1 live on GitHub. Optional next step: Windhawk Marketplace PR.
 
+## 2026-05-15 — Pre-submission review fixes
+
+External code review surfaced three issues; all fixed and pushed as commit `3b18b83`:
+
+1. **`@license MIT` missing from metadata block** — added to satisfy catalog submission requirements.
+2. **`BBarSubclassProc` WM_DESTROY not forwarded** — `g_origBBarWndProc` was zeroed before the return check, so the original wndproc never received WM_DESTROY. Fixed by capturing `origProc` in a local at the top of the function under lock, then using the local for both the `SetWindowLongPtrW` restore and the final `CallWindowProcW`.
+3. **`g_hostname` cross-thread data race** — `UpdateHostname()` wrote from the hook thread while `WM_PAINT` read from the helper thread with no synchronization. Fixed by wrapping the write in `UpdateHostname` with `g_cs`, and copying to a stack-local in `WM_PAINT` under `g_cs` before drawing.
+
+**Status:** All three fixes live on `main`. Repo is submission-ready for Windhawk Marketplace.
+
