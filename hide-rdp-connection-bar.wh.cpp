@@ -2,7 +2,7 @@
 // @id              hide-rdp-connection-bar
 // @name            Hide RDP Connection Bar
 // @description     Hides the Remote Desktop connection bar in fullscreen RDP sessions on Windows 11 and replaces it with a clean disconnect button. Shows hostname, fades when idle, supports a disconnect hotkey. Multi-monitor aware.
-// @version         1.1.1
+// @version         1.1.3
 // @author          StarlightDaemon
 // @github          https://github.com/StarlightDaemon
 // @include         mstsc.exe
@@ -97,6 +97,7 @@ it cannot appear for a session that is already running.
 
 #include <windows.h>
 #include <shellscalingapi.h>
+#include <atomic>
 
 namespace {
 
@@ -111,6 +112,8 @@ constexpr int  FADE_TIMER_ID   = 42;
 constexpr int  HOTKEY_ID       = 1;
 constexpr auto BTN_CLASS       = L"WH_RdpDisconnectBtn";
 constexpr UINT WM_CREATE_BTN   = WM_APP + 1;
+constexpr UINT WM_HIDE_BTN     = WM_APP + 2;
+constexpr UINT WM_REPAINT_BTN  = WM_APP + 3;
 
 // ── Settings ──────────────────────────────────────────────────────────────
 
@@ -145,7 +148,7 @@ void LoadSettings() {
 
     // Offset — custom overrides preset when non-zero
     int custom = Wh_GetIntSetting(L"offsetCustom");
-    if (custom > 0) {
+    if (custom != 0) {
         g_buttonOffset = custom;
     } else {
         PCWSTR preset = Wh_GetStringSetting(L"offsetPreset");
@@ -178,12 +181,14 @@ void LoadSettings() {
 
 // ── Shared state ──────────────────────────────────────────────────────────
 
-CRITICAL_SECTION g_cs;
-HWND             g_hBBar           = nullptr;
-HWND             g_hRdpFrame       = nullptr;
-WNDPROC          g_origBBarWndProc = nullptr;
-HMONITOR         g_hLastMonitor    = nullptr;
-wchar_t          g_hostname[256]   = {};
+CRITICAL_SECTION          g_cs;
+HWND                      g_hBBar           = nullptr;
+HWND                      g_hRdpFrame       = nullptr;
+WNDPROC                   g_origBBarWndProc = nullptr;
+std::atomic<HMONITOR>     g_hLastMonitor    { nullptr };
+wchar_t                   g_hostname[256]   = {};
+HANDLE                    g_hHelperThread   = nullptr;
+DWORD                     g_helperThreadId  = 0;
 
 // ── Hook originals ────────────────────────────────────────────────────────
 
@@ -249,7 +254,9 @@ void UpdateHostname() {
 // ── Disconnect ────────────────────────────────────────────────────────────
 
 void DisconnectSession(HWND hRef) {
+    EnterCriticalSection(&g_cs);
     HWND hFrame = g_hRdpFrame;
+    LeaveCriticalSection(&g_cs);
     if (!hFrame || !IsWindow(hFrame))
         hFrame = GetAncestor(hRef, GA_ROOT);
     if (!hFrame || !IsWindow(hFrame))
@@ -275,7 +282,11 @@ LRESULT CALLBACK BBarSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
         g_hBBar           = nullptr;
         g_hRdpFrame       = nullptr;
         g_origBBarWndProc = nullptr;
+        bool showBtn = g_showButton;
         LeaveCriticalSection(&g_cs);
+        g_hLastMonitor.store(nullptr);
+        if (showBtn && g_helperThreadId)
+            PostThreadMessageW(g_helperThreadId, WM_HIDE_BTN, 0, 0);
     }
 
     return origProc
@@ -379,14 +390,25 @@ LRESULT CALLBACK BtnWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         return 0;
     }
 
-    case WM_LBUTTONDOWN:
-        DisconnectSession(g_hBBar ? g_hBBar : hwnd);
+    case WM_LBUTTONDOWN: {
+        HWND hRef;
+        EnterCriticalSection(&g_cs);
+        hRef = g_hBBar ? g_hBBar : hwnd;
+        LeaveCriticalSection(&g_cs);
+        DisconnectSession(hRef);
         return 0;
+    }
 
-    case WM_HOTKEY:
-        if (wParam == HOTKEY_ID)
-            DisconnectSession(g_hBBar ? g_hBBar : hwnd);
+    case WM_HOTKEY: {
+        if (wParam == HOTKEY_ID) {
+            HWND hRef;
+            EnterCriticalSection(&g_cs);
+            hRef = g_hBBar ? g_hBBar : hwnd;
+            LeaveCriticalSection(&g_cs);
+            DisconnectSession(hRef);
+        }
         return 0;
+    }
 
     case WM_MOUSEMOVE:
         if (g_fadeWhenIdle) {
@@ -412,6 +434,12 @@ LRESULT CALLBACK BtnWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     case WM_SETCURSOR:
         SetCursor(LoadCursorW(nullptr, IDC_HAND));
         return TRUE;
+
+    case WM_DISPLAYCHANGE:
+        g_hLastMonitor.store(nullptr);
+        if (g_helperThreadId)
+            PostThreadMessageW(g_helperThreadId, WM_CREATE_BTN, 0, 0);
+        return 0;
 
     case WM_DESTROY:
         KillTimer(hwnd, FADE_TIMER_ID);
@@ -452,6 +480,8 @@ void CreateOrRepositionButton() {
         
         HRGN hRgn = CreateRoundRectRgn(0, 0, scaledW + 1, scaledH + 1, MulDiv(8, dpiX, 96), MulDiv(8, dpiY, 96));
         SetWindowRgn(g_hBtn, hRgn, FALSE);
+        UpdateHostname();
+        InvalidateRect(g_hBtn, nullptr, TRUE);
         return;
     }
 
@@ -498,9 +528,6 @@ void CreateOrRepositionButton() {
 
 // ── Helper thread ─────────────────────────────────────────────────────────
 
-HANDLE g_hHelperThread  = nullptr;
-DWORD  g_helperThreadId = 0;
-
 DWORD WINAPI HelperThread(LPVOID) {
     WNDCLASSEXW wc   = { sizeof(wc) };
     wc.lpfnWndProc   = BtnWndProc;
@@ -519,6 +546,12 @@ DWORD WINAPI HelperThread(LPVOID) {
     while (GetMessageW(&msg, nullptr, 0, 0) > 0) {
         if (msg.message == WM_CREATE_BTN) {
             CreateOrRepositionButton();
+        } else if (msg.message == WM_HIDE_BTN) {
+            if (g_hBtn && IsWindow(g_hBtn))
+                pOrigShowWindow(g_hBtn, SW_HIDE);
+        } else if (msg.message == WM_REPAINT_BTN) {
+            if (g_hBtn && IsWindow(g_hBtn))
+                InvalidateRect(g_hBtn, nullptr, TRUE);
         } else {
             TranslateMessage(&msg);
             DispatchMessageW(&msg);
@@ -614,8 +647,8 @@ BOOL WINAPI SetWindowPos_Hook(
 
     if (g_showButton && hWnd && hWnd == g_hRdpFrame && !(uFlags & SWP_NOMOVE)) {
         HMONITOR hMon = MonitorFromWindow(hWnd, MONITOR_DEFAULTTONEAREST);
-        if (hMon && hMon != g_hLastMonitor) {
-            g_hLastMonitor = hMon;
+        if (hMon && hMon != g_hLastMonitor.load()) {
+            g_hLastMonitor.store(hMon);
             Wh_Log(L"RDP frame changed monitor — repositioning button");
             if (g_helperThreadId)
                 PostThreadMessageW(g_helperThreadId, WM_CREATE_BTN, 0, 0);
@@ -634,8 +667,8 @@ BOOL WINAPI SetWindowTextW_Hook(HWND hWnd, LPCWSTR lpString) {
 
     if (isFrame && g_showButton && g_showHostname) {
         UpdateHostname();
-        if (g_hBtn && IsWindow(g_hBtn))
-            InvalidateRect(g_hBtn, nullptr, TRUE);
+        if (g_helperThreadId)
+            PostThreadMessageW(g_helperThreadId, WM_REPAINT_BTN, 0, 0);
     }
     return result;
 }
@@ -669,7 +702,7 @@ BOOL Wh_ModInit() {
     if (g_showButton)
         StartHelperThread();
 
-    Wh_Log(L"Hide RDP Connection Bar v1.1.1 initialized — "
+    Wh_Log(L"Hide RDP Connection Bar v1.1.3 initialized — "
            L"hide=%d button=%d hotkey=%d fade=%d hostname=%d",
            (int)g_hideBar, (int)g_showButton,
            (int)g_enableHotkey, (int)g_fadeWhenIdle, (int)g_showHostname);
@@ -691,7 +724,7 @@ void Wh_ModSettingsChanged() {
     LeaveCriticalSection(&g_cs);
 
     if (hBBar && IsWindow(hBBar)) {
-        pOrigShowWindow(hBBar, SW_HIDE);
+        pOrigShowWindow(hBBar, g_hideBar ? SW_HIDE : SW_SHOWNOACTIVATE);
         if (g_showButton && g_helperThreadId)
             PostThreadMessageW(g_helperThreadId, WM_CREATE_BTN, 0, 0);
     }
@@ -712,6 +745,9 @@ void Wh_ModUninit() {
     if (hBBar && origProc && IsWindow(hBBar))
         SetWindowLongPtrW(hBBar, GWLP_WNDPROC,
             reinterpret_cast<LONG_PTR>(origProc));
+
+    if (hBBar && IsWindow(hBBar))
+        pOrigShowWindow(hBBar, SW_SHOWNOACTIVATE);
 
     DeleteCriticalSection(&g_cs);
 }
