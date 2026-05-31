@@ -15,14 +15,14 @@ Remote Desktop sessions on Windows 11. Hooks four Win32 APIs inside `mstsc.exe`.
 
 ## Project Status
 
-- Source file: `hide-rdp-connection-bar.wh.cpp` — v1.1.3, complete and compilable
+- Source file: `hide-rdp-connection-bar.wh.cpp` — v1.1.4, complete and compilable
 - `README.md`, `LICENSE` (MIT), `.gitignore`, `assets/` placeholder all present
 - No build system, no CI configured
-- **Pushed to GitHub** — `main` branch live at `StarlightDaemon/Hide-RDP-Connection-Bar` (HEAD `8355544`, local has unpushed changes from this session)
-- **Operator live test passed** — confirmed working on Windows 11 (tested at v1.1.1; threading fixes in v1.1.3 are correctness-only)
+- **Pushed to GitHub** — `main` branch live at `StarlightDaemon/Hide-RDP-Connection-Bar` (HEAD `8523d57`)
+- **Operator live test passed** — confirmed working on Windows 11 (tested at v1.1.1; all subsequent releases are correctness/threading fixes)
 - Not yet published to Windhawk Marketplace
 
-## v1.1.3 feature set
+## v1.1.4 feature set
 
 - Hide native connection bar (`hideBar`) — four hooks: CreateWindowExW, ShowWindow, SetWindowPos, SetWindowTextW
 - Disconnect button (`showButton`) — 80×56px floating overlay, WS_POPUP|WS_EX_LAYERED|WS_EX_TOPMOST

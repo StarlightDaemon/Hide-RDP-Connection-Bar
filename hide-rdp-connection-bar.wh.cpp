@@ -703,7 +703,7 @@ BOOL Wh_ModInit() {
     if (g_showButton)
         StartHelperThread();
 
-    Wh_Log(L"Hide RDP Connection Bar v1.1.3 initialized — "
+    Wh_Log(L"Hide RDP Connection Bar v1.1.4 initialized — "
            L"hide=%d button=%d hotkey=%d fade=%d hostname=%d",
            (int)g_hideBar, (int)g_showButton,
            (int)g_enableHotkey, (int)g_fadeWhenIdle, (int)g_showHostname);
