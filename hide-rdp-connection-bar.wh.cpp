@@ -2,7 +2,7 @@
 // @id              hide-rdp-connection-bar
 // @name            Hide RDP Connection Bar
 // @description     Hides the Remote Desktop connection bar in fullscreen RDP sessions on Windows 11 and replaces it with a clean disconnect button. Shows hostname, fades when idle, supports a disconnect hotkey. Multi-monitor aware.
-// @version         1.1.3
+// @version         1.1.4
 // @author          StarlightDaemon
 // @github          https://github.com/StarlightDaemon
 // @include         mstsc.exe
@@ -126,7 +126,7 @@ bool g_showBorder     = true;
 bool g_showHostname   = true;
 bool g_fadeWhenIdle   = false;
 bool g_enableHotkey   = false;
-bool g_hotkeyRegistered = false;
+std::atomic<bool> g_hotkeyRegistered { false };
 UINT g_hotkeyMod      = MOD_CONTROL | MOD_ALT;
 UINT g_hotkeyVk       = 'D';
 
@@ -605,14 +605,15 @@ HWND WINAPI CreateWindowExW_Hook(
         Wh_Log(L"BBar detected HWND=%p frame=%p monitor=%d,%d-%d,%d",
             hwnd, hFrame, mon.left, mon.top, mon.right, mon.bottom);
 
-        EnterCriticalSection(&g_cs);
-        g_hBBar     = hwnd;
-        g_hRdpFrame = hFrame;
-        LeaveCriticalSection(&g_cs);
-
-        g_origBBarWndProc = reinterpret_cast<WNDPROC>(
+        WNDPROC origProc = reinterpret_cast<WNDPROC>(
             SetWindowLongPtrW(hwnd, GWLP_WNDPROC,
                 reinterpret_cast<LONG_PTR>(BBarSubclassProc)));
+
+        EnterCriticalSection(&g_cs);
+        g_hBBar           = hwnd;
+        g_hRdpFrame       = hFrame;
+        g_origBBarWndProc = origProc;
+        LeaveCriticalSection(&g_cs);
 
         if (g_hideBar)
             pOrigShowWindow(hwnd, SW_HIDE);

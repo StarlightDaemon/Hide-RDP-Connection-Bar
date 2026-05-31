@@ -1,31 +1,28 @@
 # Current State
 
-**As of: 2026-05-15**
+**As of: 2026-05-31**
 
 ## What This Repo Is
 
 A [Windhawk](https://windhawk.net/) mod (`hide-rdp-connection-bar.wh.cpp`) that
 permanently hides the floating RDP connection bar (BBarWindowClass) in fullscreen
-Remote Desktop sessions on Windows 11 24H2. Hooks `CreateWindowExW` in
-`mstsc.exe` and calls `ShowWindow(hwnd, SW_HIDE)` immediately after bar creation.
+Remote Desktop sessions on Windows 11. Hooks four Win32 APIs inside `mstsc.exe`.
 
 ## RAIDEN Instance Status
 
 - Edict v0.4.0 installed 2026-05-15 by RAIDEN central
 - Control plane: `.raiden/` — standard v0.4.0 layout
-- No open loops at install time
 
 ## Project Status
 
-- Source file: `hide-rdp-connection-bar.wh.cpp` — v1.1.1, complete and compilable
+- Source file: `hide-rdp-connection-bar.wh.cpp` — v1.1.3, complete and compilable
 - `README.md`, `LICENSE` (MIT), `.gitignore`, `assets/` placeholder all present
 - No build system, no CI configured
-- **Pushed to GitHub** — `main` branch live at `StarlightDaemon/Hide-RDP-Connection-Bar` (10 commits, HEAD `3b18b83`)
-- **Operator live test passed** — confirmed working on Windows 11
-- **Pre-submission review completed** — three bugs fixed (see Work Log 2026-05-15 review session)
+- **Pushed to GitHub** — `main` branch live at `StarlightDaemon/Hide-RDP-Connection-Bar` (HEAD `8355544`, local has unpushed changes from this session)
+- **Operator live test passed** — confirmed working on Windows 11 (tested at v1.1.1; threading fixes in v1.1.3 are correctness-only)
 - Not yet published to Windhawk Marketplace
 
-## v1.1.1 feature set
+## v1.1.3 feature set
 
 - Hide native connection bar (`hideBar`) — four hooks: CreateWindowExW, ShowWindow, SetWindowPos, SetWindowTextW
 - Disconnect button (`showButton`) — 80×56px floating overlay, WS_POPUP|WS_EX_LAYERED|WS_EX_TOPMOST
@@ -36,4 +33,4 @@ Remote Desktop sessions on Windows 11 24H2. Hooks `CreateWindowExW` in
 - Disconnect hotkey (`enableHotkey`) — RegisterHotKey with modifier + key dropdowns; visual "Hotkey Failed" label on conflict
 - DPI-aware sizing — GetDpiForMonitor scales button size, offsets, fonts, corner radius
 - Multi-monitor aware — MonitorFromWindow; repositions on frame monitor change
-- Helper thread owns button window; CRITICAL_SECTION guards shared HWNDs
+- Helper thread owns button window; CRITICAL_SECTION guards shared HWNDs and g_hostname; g_hotkeyRegistered is std::atomic<bool>

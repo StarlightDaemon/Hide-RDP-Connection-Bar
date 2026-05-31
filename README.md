@@ -39,14 +39,6 @@ The disconnect button is a separate floating window (`WS_POPUP | WS_EX_LAYERED |
 
 ## Installation
 
-### Via Windhawk Marketplace
-
-1. Install [Windhawk](https://windhawk.net/)
-2. Open Windhawk and search for **"Hide RDP Connection Bar"**
-3. Click **Install**
-
-### Manual Install
-
 1. Install [Windhawk](https://windhawk.net/)
 2. Open Windhawk → **Create new mod**
 3. Copy the contents of [`hide-rdp-connection-bar.wh.cpp`](hide-rdp-connection-bar.wh.cpp) into the editor
@@ -79,7 +71,6 @@ To temporarily restore the native bar without uninstalling the mod, open Windhaw
 - **Ctrl+Alt+Home** — This keyboard shortcut is hardwired into the RDP client to show a menu accessed through the connection bar. With the mod active the bar is hidden immediately after creation, so it may briefly flash into view before being hidden. This is a cosmetic artifact and does not affect functionality.
 - **Some settings require reconnect** — The disconnect button and hotkey are created when the session starts and cannot be added to an already-running session. All other settings (hide bar, fade, hostname, border) take effect immediately via the Windhawk settings panel.
 - **Tested on Windows 11** — Behavior on earlier Windows versions or the Windows App (formerly MSRDC) client is untested.
-- **Button requires reconnect** — The connection bar is only created when a session starts. If you enable the disconnect button mid-session, you must disconnect and reconnect for it to appear.
 - **Hotkey Conflicts** — If the chosen hotkey is already used by another application, the mod will silently fail to register it at the OS level, but the button will display "✕  Hotkey Failed" to alert you.
 
 ---

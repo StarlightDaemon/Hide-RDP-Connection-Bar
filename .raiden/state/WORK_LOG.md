@@ -85,3 +85,21 @@ External code review surfaced three issues; all fixed and pushed as commit `3b18
 
 **Status:** All three fixes live on `main`. Repo is submission-ready for Windhawk Marketplace.
 
+## 2026-05-31 — v1.1.3 threading and correctness pass; repo cleanup
+
+Full-scope review of the codebase identified two remaining correctness issues and several repo hygiene items. All corrected in this session:
+
+**Code fixes (v1.1.3 — will require a version bump to v1.1.4 before next push):**
+1. `g_hotkeyRegistered` promoted from `bool` to `std::atomic<bool>` — it was written by the helper thread (`CreateOrRepositionButton`) and read by the main thread (`WM_PAINT`) with no synchronization. All other shared cross-thread state was already protected; this was the only gap.
+2. `g_origBBarWndProc` write moved inside `g_cs` — `SetWindowLongPtrW` is called outside the lock (correct, to avoid re-entrancy), but its return value is now assigned to `g_origBBarWndProc` inside the critical section alongside `g_hBBar` and `g_hRdpFrame`, consistent with how that value is read in `BBarSubclassProc`.
+
+**README fixes:**
+3. Removed the "Via Windhawk Marketplace" installation section — the mod has not been submitted yet; the section was incorrect.
+4. Removed the redundant "Button requires reconnect" Known Limitation bullet — fully covered by the adjacent "Some settings require reconnect" bullet.
+
+**File cleanup:**
+5. Deleted `AGENT_BUGFIX_PROMPT.md` — all eight bugs it described were fixed in v1.1.3; file was spent.
+6. Deleted `REVIEW_BRIEF.md` — stale pre-v1.0.0 document; described DPI and hotkey feedback as unimplemented (both shipped in v1.0.0).
+
+**Open loop remaining:** Windhawk Marketplace PR to `ramensoftware/windhawk-mods` — no blockers.
+
