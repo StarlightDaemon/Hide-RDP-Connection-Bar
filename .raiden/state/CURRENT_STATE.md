@@ -10,7 +10,7 @@ Remote Desktop sessions on Windows 11. Hooks four Win32 APIs inside `mstsc.exe`.
 
 ## RAIDEN Instance Status
 
-- Edict v0.4.0 installed 2026-05-15 by RAIDEN central
+- Edict v0.6.1 installed 2026-06-07 by RAIDEN central
 - Control plane: `.raiden/` — standard v0.4.0 layout
 
 ## Project Status
