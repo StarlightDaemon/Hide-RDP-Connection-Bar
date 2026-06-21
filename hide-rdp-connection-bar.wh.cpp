@@ -117,6 +117,17 @@ constexpr UINT WM_REPAINT_BTN  = WM_APP + 3;
 
 // ── Settings ──────────────────────────────────────────────────────────────
 
+/*
+ * These globals are non-atomic scalars written by LoadSettings() on Windhawk's
+ * settings-changed thread and read concurrently by hook callbacks and the helper
+ * thread without synchronization. This is a data race and technically undefined
+ * behavior per the C++ standard. The decision is deliberate: on x86/x64 all
+ * naturally-aligned word-sized loads and stores are atomic at the hardware level;
+ * no cross-field invariant exists across these flags; and the worst observable
+ * outcome is a setting taking effect one repaint late, which already matches the
+ * mod's recreate-on-change model. The fields that carry real cross-thread invariants
+ * (g_hLastMonitor, g_hotkeyRegistered) are separately guarded with std::atomic.
+ */
 bool g_hideBar        = true;
 bool g_showButton     = false;
 bool g_buttonOnRight  = true;
