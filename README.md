@@ -1,7 +1,7 @@
 # Hide RDP Connection Bar
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Platform](https://img.shields.io/badge/Windows-11-0078D4?logo=windows&logoColor=white)]()
+![Platform](https://img.shields.io/badge/Windows-11-0078D4?logo=windows&logoColor=white)
 [![Windhawk](https://img.shields.io/badge/Windhawk-mod-orange)](https://windhawk.net/)
 
 A [Windhawk](https://windhawk.net/) mod that permanently hides the floating Remote Desktop connection bar in fullscreen sessions on Windows 11. The native options to keep the bar hidden often fail to persist in Windows 11 — this mod handles it at the process level so it stays gone.
