@@ -40,3 +40,8 @@ out/
 .vscode/
 *.swp
 *~
+
+# macOS and AI tooling (local-environment artifacts)
+.DS_Store
+.serena/
+.claude/
