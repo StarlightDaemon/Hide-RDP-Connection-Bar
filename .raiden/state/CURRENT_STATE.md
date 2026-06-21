@@ -10,17 +10,18 @@ Remote Desktop sessions on Windows 11. Hooks four Win32 APIs inside `mstsc.exe`.
 
 ## RAIDEN Instance Status
 
-- Edict v0.6.1 installed 2026-06-07 by RAIDEN central
-- Edict v0.6.1 confirmed clean — migration audit 2026-06-07
+- Edict v1.0.0 installed 2026-06-07 by RAIDEN central
+- Edict v1.0.0 confirmed clean — migration audit 2026-06-07
 - WSL→macOS migration remediation complete 2026-06-07: all `/mnt/e/` paths resolved, `commit-msg` hook execute bit set
-- Control plane: `.raiden/` — standard v0.6.1 layout
+- Control plane: `.raiden/` — standard v1.0.0 layout
+- Maintenance sweep 2026-06-21: audit findings F1–F9 resolved (git identity, unpushed commit, .gitignore, threading annotation, TESTING.md, README badge, state doc reconciliation)
 
 ## Project Status
 
 - Source file: `hide-rdp-connection-bar.wh.cpp` — v1.1.4, complete and compilable
-- `README.md`, `LICENSE` (MIT), `.gitignore`, `assets/` placeholder all present
+- `README.md`, `LICENSE` (MIT), `.gitignore` present
 - No build system, no CI configured
-- **Pushed to GitHub** — `main` branch live at `StarlightDaemon/Hide-RDP-Connection-Bar` (HEAD `f14651f`)
+- **Pushed to GitHub** — `main` branch live at `StarlightDaemon/Hide-RDP-Connection-Bar` (HEAD `03153db`)
 - **Operator live test passed** — confirmed working on Windows 11 (tested at v1.1.1; all subsequent releases are correctness/threading fixes)
 - Not yet published to Windhawk Marketplace
 
