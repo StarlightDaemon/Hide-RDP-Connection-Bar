@@ -103,3 +103,37 @@ Full-scope review of the codebase identified two remaining correctness issues an
 
 **Open loop remaining:** Windhawk Marketplace PR to `ramensoftware/windhawk-mods` — no blockers.
 
+## 2026-07-09 — Edict v2.0.0 + state normalization
+
+- Applied RAIDEN Edict v2.0.0 (upgrade from v1.0.1): updated `README.md`,
+  `OPERATING_RULES.md`, `WORKSPACE_AUDIT_PROTOCOL.md`, `FORK_REVIEW_PROTOCOL.md`,
+  `AGENTS.md`; added `ROUTING_POLICY.md`; removed managed `MODEL_TIERS.md`
+  (absent from the new package, flagged `managed_file_removal`, confirmed safe
+  to remove). Hook `commit-msg` unchanged. Re-plan confirmed "Already up to
+  date."
+- Stamped `state_schema_version: 2` into `.raiden/instance/metadata.json`.
+- Replaced the local routing overlay: removed `.raiden/local/MODEL_MAP.md`
+  (untracked/gitignored, never committed) and added `.raiden/local/ROUTING.md`
+  (ladder R1–R4 plus an offload pool and billing constraints citing
+  `Raiden-ops:OPS-D-003`). Updated `.raiden/local/.gitignore` from
+  `MODEL_MAP.md` to `ROUTING.md` so the overlay stays out of this public repo.
+- State normalization per the new `.raiden/writ/OPERATING_RULES.md` Fact-Home
+  Rule:
+  - Removed the hand-written "As of: 2026-06-07" footer from
+    `CURRENT_STATE.md`.
+  - Relocated historical narrative out of `CURRENT_STATE.md` that was not
+    previously recorded here:
+    - 2026-06-07 — Edict v1.0.0 installed by RAIDEN central.
+    - 2026-06-07 — Edict v1.0.0 confirmed clean, per migration audit.
+    - 2026-06-21 — Maintenance sweep: audit findings F1–F9 resolved (git
+      identity, unpushed commit, `.gitignore`, threading annotation,
+      `TESTING.md`, README badge, state doc reconciliation).
+  - Deleted the stale current-version claim "Control plane: `.raiden/` —
+    standard v1.0.0 layout" from `CURRENT_STATE.md` (superseded by v2.0.0, no
+    unique historical content to preserve).
+  - Replaced the WSL→macOS migration restatement in `CURRENT_STATE.md` with a
+    bare citation to `LOOP-002` — the full account already lives in
+    `OPEN_LOOPS.md`. Assigned loop IDs `LOOP-001` (Windhawk Marketplace PR) and
+    `LOOP-002` (WSL→macOS migration remediation) in `OPEN_LOOPS.md` to make the
+    citation resolvable.
+

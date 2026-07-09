@@ -1,7 +1,5 @@
 # Current State
 
-**As of: 2026-06-07**
-
 ## What This Repo Is
 
 A [Windhawk](https://windhawk.net/) mod (`hide-rdp-connection-bar.wh.cpp`) that
@@ -10,11 +8,7 @@ Remote Desktop sessions on Windows 11. Hooks four Win32 APIs inside `mstsc.exe`.
 
 ## RAIDEN Instance Status
 
-- Edict v1.0.0 installed 2026-06-07 by RAIDEN central
-- Edict v1.0.0 confirmed clean — migration audit 2026-06-07
-- WSL→macOS migration remediation complete 2026-06-07: all `/mnt/e/` paths resolved, `commit-msg` hook execute bit set
-- Control plane: `.raiden/` — standard v1.0.0 layout
-- Maintenance sweep 2026-06-21: audit findings F1–F9 resolved (git identity, unpushed commit, .gitignore, threading annotation, TESTING.md, README badge, state doc reconciliation)
+- WSL→macOS migration remediation: LOOP-002 (closed)
 
 ## Project Status
 
