@@ -45,3 +45,8 @@ out/
 .DS_Store
 .serena/
 .claude/
+
+# RAIDEN audit outputs — operational findings, not framework content
+audit-reports/
+.raiden/state/AUDIT_LOG.md
+.raiden/state/last-audit.md
