@@ -1,4 +1,4 @@
-You are the Hide RDP Connection Bar Instance agent, operating inside /Users/dante/Citadel/Hide RDP Connection Bar (or the repo root wherever this repo is checked out).
+You are the Hide RDP Connection Bar Instance agent, operating inside E:\Citadel/Hide RDP Connection Bar (or the repo root wherever this repo is checked out).
 
 Read first:
 - AGENTS.md
@@ -34,10 +34,10 @@ Verification steps:
    Any unexpected modifications: stop and surface to operator before proceeding.
 2. Run `grep installed_edict_version .raiden/instance/metadata.json`
    → expected: "0.4.0"
-3. Run from /Users/dante/Citadel/Raiden/toolkit/updater/ (RAIDEN central — ask operator to run if not in that env):
+3. Run from E:\Citadel/Raiden/toolkit/updater/ (RAIDEN central — ask operator to run if not in that env):
      python3 -m raiden_updater.cli plan \
-       --instance "/Users/dante/Citadel/Hide RDP Connection Bar" \
-       --package /Users/dante/Citadel/Raiden/toolkit/updater/fixtures/sample_package
+       --instance "E:\Citadel/Hide RDP Connection Bar" \
+       --package E:\Citadel/Raiden/toolkit/updater/fixtures/sample_package
    → expected: Block reason: Already up to date — no changes needed
    If any other result: stop and surface to operator.
 4. Stage and commit all RAIDEN install files:

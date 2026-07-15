@@ -33,7 +33,7 @@ downstream repos called RAIDEN Instances via an updater toolchain. This repo
 is a RAIDEN Instance. The .raiden/ directory is the local control plane
 installed by that process.
 
-RAIDEN is located at /Users/dante/Citadel/Raiden on this machine. You do not need to read
+RAIDEN is located at E:\Citadel/Raiden on this machine. You do not need to read
 or interact with it unless the operator explicitly directs you to.
 
 ## Naming Canon
@@ -123,6 +123,6 @@ overwriting. Do not run raiden_updater.cli apply from within this repo.
 
 - This prompt covers RAIDEN framework orientation only. For session startup
   (git status, push flow, token request), use `instance-session-startup.md`.
-- The RAIDEN central repo is at `/Users/dante/Citadel/Raiden`. The updater toolchain is at
+- The RAIDEN central repo is at `E:\Citadel/Raiden`. The updater toolchain is at
   `toolkit/updater/` within that repo.
 - Current installed Edict version: 0.4.0 (see `.raiden/instance/metadata.json`).

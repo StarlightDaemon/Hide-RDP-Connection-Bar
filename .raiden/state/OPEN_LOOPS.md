@@ -19,4 +19,4 @@ stale `add-hide-rdp-connection-bar` branch from 2026-05-15.
 
 ## Closed
 
-- **LOOP-002 — WSL→macOS migration remediation** — completed 2026-06-07. All `/mnt/e/` path references replaced with `/Users/dante/Citadel/` equivalents across AGENTS.md, raiden-orientation.md, fresh-install-handoff.md, and CURRENT_STATE.md. `commit-msg` hook execute bit set. Global scan confirmed clean. Committed `f14651f` and pushed.
+- **LOOP-002 — WSL→macOS migration remediation** — completed 2026-06-07. All `/mnt/e/` path references replaced with `E:\Citadel/` equivalents across AGENTS.md, raiden-orientation.md, fresh-install-handoff.md, and CURRENT_STATE.md. `commit-msg` hook execute bit set. Global scan confirmed clean. Committed `f14651f` and pushed.

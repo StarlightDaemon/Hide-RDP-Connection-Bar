@@ -3,7 +3,7 @@
 - **Audited:** 2026-06-21
 - **Commit:** `e6ab97e` (main, clean working tree, fully pushed to `origin/main`)
 - **Instrument:** Repository Audit Instrument v4.2 (read-only)
-- **Operating boundary:** `/Users/dante/Citadel/Hide RDP Connection Bar` — nothing read or written outside it; this report is the only file created.
+- **Operating boundary:** `E:\Citadel/Hide RDP Connection Bar` — nothing read or written outside it; this report is the only file created.
 
 ---
 
