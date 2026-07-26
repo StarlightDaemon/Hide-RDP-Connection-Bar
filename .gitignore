@@ -48,6 +48,7 @@ out/
 
 # RAIDEN audit outputs — operational findings, not framework content
 audit-reports/
+.audits/
 .raiden/state/AUDIT_LOG.md
 .raiden/state/last-audit.md
 
