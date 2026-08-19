@@ -49,6 +49,18 @@ Enable the disconnect button in Windhawk settings before running these checks.
 - [ ] Button returns to full opacity on mouse proximity after fade
 - [ ] Toggling "Show disconnect button" off and back on several times in quick succession, with an active RDP session, does not crash or leave the button in a broken state (exercises helper thread teardown/recreation)
 
+**Drag-to-Reposition**
+
+- [ ] A short click on the button still disconnects the session and does not move the button; a press-and-move past the system drag threshold starts a live-following drag instead and does not disconnect on release
+- [ ] Dragging the button to each of the four screen corners and dropping it leaves it at the dropped position, not snapped back to a default
+- [ ] Dropping the button very close to a screen edge, including near the taskbar if one is visible, leaves the full button on screen rather than clipped or partially off-monitor
+- [ ] Disconnecting after a drag, then reconnecting, shows the button at the previously dragged position rather than the settings-derived default
+- [ ] With a dragged position active, changing the Button position, Corner offset, or Custom offset setting in the Windhawk UI resets the button back to the new settings-derived default rather than leaving it at the old dragged spot
+- [ ] A drag-and-reconnect check at a non-100% display scale (e.g. 150%) lands the dragged offset correctly rather than scaled on the wrong axis
+- [ ] On a multi-monitor setup, dragging the button on one monitor, then reconnecting so the session appears on a different monitor with a different resolution, leaves the button in a sensible, fully on-screen position
+- [ ] Switching away from the RDP window mid-drag (e.g. Alt+Tab) leaves the button in a sane, finalized position afterward rather than stuck following a cursor that is no longer tracked
+- [ ] The cursor visibly changes while actively dragging (size-all) versus while idle over the button (hand)
+
 ---
 
 ## Hotkey
