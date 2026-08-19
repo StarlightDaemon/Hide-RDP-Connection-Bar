@@ -52,7 +52,7 @@ configured default.
 - hideBar: true
   $name: Hide connection bar
   $description: Hides the native RDP connection bar. Turn off to restore it.
-- showButton: false
+- showButton: true
   $name: Show disconnect button
   $description: Shows a disconnect button on the screen edge. Works with or without Hide. If it does not appear, close and reopen the Remote Desktop connection.
 - buttonPosition: top-right
