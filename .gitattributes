@@ -1,0 +1,16 @@
+# Normalize line endings in the repo to LF; check out as LF regardless of
+# core.autocrlf, so a Windows checkout doesn't get flagged for CRLF churn
+# on every commit.
+* text=auto eol=lf
+
+*.cpp text eol=lf
+*.h text eol=lf
+*.hpp text eol=lf
+*.md text eol=lf
+
+# Binary types, in case assets are added later.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.ico binary
+*.gif binary
