@@ -199,7 +199,7 @@ WNDPROC                   g_origBBarWndProc = nullptr;
 std::atomic<HMONITOR>     g_hLastMonitor    { nullptr };
 wchar_t                   g_hostname[256]   = {};
 HANDLE                    g_hHelperThread   = nullptr;
-DWORD                     g_helperThreadId  = 0;
+std::atomic<DWORD>        g_helperThreadId  { 0 };
 
 // ── Hook originals ────────────────────────────────────────────────────────
 
@@ -296,8 +296,9 @@ LRESULT CALLBACK BBarSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
         bool showBtn = g_showButton;
         LeaveCriticalSection(&g_cs);
         g_hLastMonitor.store(nullptr);
-        if (showBtn && g_helperThreadId)
-            PostThreadMessageW(g_helperThreadId, WM_HIDE_BTN, 0, 0);
+        DWORD helperThreadId = g_helperThreadId.load();
+        if (showBtn && helperThreadId)
+            PostThreadMessageW(helperThreadId, WM_HIDE_BTN, 0, 0);
     }
 
     return origProc
@@ -446,11 +447,13 @@ LRESULT CALLBACK BtnWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         SetCursor(LoadCursorW(nullptr, IDC_HAND));
         return TRUE;
 
-    case WM_DISPLAYCHANGE:
+    case WM_DISPLAYCHANGE: {
         g_hLastMonitor.store(nullptr);
-        if (g_helperThreadId)
-            PostThreadMessageW(g_helperThreadId, WM_CREATE_BTN, 0, 0);
+        DWORD helperThreadId = g_helperThreadId.load();
+        if (helperThreadId)
+            PostThreadMessageW(helperThreadId, WM_CREATE_BTN, 0, 0);
         return 0;
+    }
 
     case WM_DESTROY:
         KillTimer(hwnd, FADE_TIMER_ID);
@@ -577,18 +580,21 @@ DWORD WINAPI HelperThread(LPVOID) {
 
 void StartHelperThread() {
     if (g_hHelperThread) return;
+    DWORD threadId = 0;
     g_hHelperThread = CreateThread(
-        nullptr, 0, HelperThread, nullptr, 0, &g_helperThreadId);
+        nullptr, 0, HelperThread, nullptr, 0, &threadId);
+    g_helperThreadId.store(threadId);
 }
 
 void StopHelperThread() {
-    if (g_helperThreadId)
-        PostThreadMessageW(g_helperThreadId, WM_QUIT, 0, 0);
+    DWORD threadId = g_helperThreadId.load();
+    if (threadId)
+        PostThreadMessageW(threadId, WM_QUIT, 0, 0);
     if (g_hHelperThread) {
         WaitForSingleObject(g_hHelperThread, 3000);
         CloseHandle(g_hHelperThread);
-        g_hHelperThread  = nullptr;
-        g_helperThreadId = 0;
+        g_hHelperThread = nullptr;
+        g_helperThreadId.store(0);
     }
 }
 
@@ -629,8 +635,9 @@ HWND WINAPI CreateWindowExW_Hook(
         if (g_hideBar)
             pOrigShowWindow(hwnd, SW_HIDE);
 
-        if (g_showButton && g_helperThreadId)
-            PostThreadMessageW(g_helperThreadId, WM_CREATE_BTN, 0, 0);
+        DWORD helperThreadId = g_helperThreadId.load();
+        if (g_showButton && helperThreadId)
+            PostThreadMessageW(helperThreadId, WM_CREATE_BTN, 0, 0);
     }
 
     return hwnd;
@@ -662,8 +669,9 @@ BOOL WINAPI SetWindowPos_Hook(
         if (hMon && hMon != g_hLastMonitor.load()) {
             g_hLastMonitor.store(hMon);
             Wh_Log(L"RDP frame changed monitor — repositioning button");
-            if (g_helperThreadId)
-                PostThreadMessageW(g_helperThreadId, WM_CREATE_BTN, 0, 0);
+            DWORD helperThreadId = g_helperThreadId.load();
+            if (helperThreadId)
+                PostThreadMessageW(helperThreadId, WM_CREATE_BTN, 0, 0);
         }
     }
 
@@ -679,8 +687,9 @@ BOOL WINAPI SetWindowTextW_Hook(HWND hWnd, LPCWSTR lpString) {
 
     if (isFrame && g_showButton && g_showHostname) {
         UpdateHostname();
-        if (g_helperThreadId)
-            PostThreadMessageW(g_helperThreadId, WM_REPAINT_BTN, 0, 0);
+        DWORD helperThreadId = g_helperThreadId.load();
+        if (helperThreadId)
+            PostThreadMessageW(helperThreadId, WM_REPAINT_BTN, 0, 0);
     }
     return result;
 }
@@ -737,8 +746,9 @@ void Wh_ModSettingsChanged() {
 
     if (hBBar && IsWindow(hBBar)) {
         pOrigShowWindow(hBBar, g_hideBar ? SW_HIDE : SW_SHOWNOACTIVATE);
-        if (g_showButton && g_helperThreadId)
-            PostThreadMessageW(g_helperThreadId, WM_CREATE_BTN, 0, 0);
+        DWORD helperThreadId = g_helperThreadId.load();
+        if (g_showButton && helperThreadId)
+            PostThreadMessageW(helperThreadId, WM_CREATE_BTN, 0, 0);
     }
 
     Wh_Log(L"Settings reloaded — hide=%d button=%d hotkey=%d fade=%d hostname=%d",

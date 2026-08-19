@@ -47,6 +47,7 @@ Enable the disconnect button in Windhawk settings before running these checks.
 - [ ] Clicking the button disconnects the session
 - [ ] Idle fade activates after approximately 4 seconds with no mouse activity
 - [ ] Button returns to full opacity on mouse proximity after fade
+- [ ] Toggling "Show disconnect button" off and back on several times in quick succession, with an active RDP session, does not crash or leave the button in a broken state (exercises helper thread teardown/recreation)
 
 ---
 
