@@ -25,12 +25,25 @@ Optionally shows a clean disconnect button pinned to any corner of the screen:
 - Configurable keyboard hotkey to disconnect without touching the mouse
 - Follows the RDP window if moved to a different monitor
 - DPI-aware — scales correctly on 4K and HiDPI displays
+- Drag the button anywhere on screen — the position persists across
+  reconnects; changing the position settings in the Windhawk UI resets it
+  back to the configured default
+
+## Requirements
+
+Requires Windhawk 1.6 or later — earlier versions lack the
+`Wh_GetModStoragePath` API used to persist the dragged button position.
 
 ## Note
 
 If the disconnect button does not appear after enabling it, close and reopen
 the Remote Desktop connection. The button is created when the session starts;
 it cannot appear for a session that is already running.
+
+Click and drag the button to reposition it anywhere on screen; the dragged
+position persists across reconnects. Changing the Button position, Corner
+offset, or Custom offset setting in the Windhawk UI resets it back to the
+configured default.
 */
 // ==/WindhawkModReadme==
 
@@ -97,6 +110,7 @@ it cannot appear for a session that is already running.
 
 #include <windows.h>
 #include <shellscalingapi.h>
+#include <windowsx.h>
 #include <atomic>
 
 namespace {
@@ -201,6 +215,15 @@ wchar_t                   g_hostname[256]   = {};
 HANDLE                    g_hHelperThread   = nullptr;
 std::atomic<DWORD>        g_helperThreadId  { 0 };
 
+// Dragged button position, overriding the settings-derived default when set.
+// Guarded by g_cs: written by the helper thread on drag finalize and cleared
+// by Wh_ModSettingsChanged on a relevant settings change (different thread).
+bool                      g_hasDragPos      = false;
+bool                      g_dragOnRight     = true;
+bool                      g_dragAtBottom    = false;
+int                       g_dragDx          = 0;
+int                       g_dragDy          = 0;
+
 // ── Hook originals ────────────────────────────────────────────────────────
 
 using CreateWindowExW_t  = decltype(&CreateWindowExW);
@@ -239,6 +262,150 @@ HMONITOR GetRdpMonitor() {
     return hRef && IsWindow(hRef)
         ? MonitorFromWindow(hRef, MONITOR_DEFAULTTONEAREST)
         : MonitorFromPoint({0, 0}, MONITOR_DEFAULTTOPRIMARY);
+}
+
+// ── Button position persistence ─────────────────────────────────────────────
+
+struct PersistedButtonPos {
+    DWORD magic;
+    DWORD version;
+    BOOL  onRight;
+    BOOL  atBottom;
+    int   dx;
+    int   dy;
+};
+
+constexpr DWORD kButtonPosMagic   = 0x50425244; // 'DRBP'
+constexpr DWORD kButtonPosVersion = 1;
+constexpr PCWSTR kButtonPosFileName = L"button-pos.dat";
+
+bool GetButtonPosFilePath(wchar_t* pathBuffer, size_t bufferChars) {
+    wchar_t dir[MAX_PATH] = {};
+    if (Wh_GetModStoragePath(dir, ARRAYSIZE(dir)) == 0) {
+        Wh_Log(L"Wh_GetModStoragePath failed");
+        return false;
+    }
+    CreateDirectoryW(dir, nullptr);
+
+    if (wcslen(dir) + 1 + wcslen(kButtonPosFileName) >= bufferChars)
+        return false;
+
+    wcscpy_s(pathBuffer, bufferChars, dir);
+    size_t len = wcslen(pathBuffer);
+    if (len > 0 && pathBuffer[len - 1] != L'\\')
+        wcscat_s(pathBuffer, bufferChars, L"\\");
+    wcscat_s(pathBuffer, bufferChars, kButtonPosFileName);
+    return true;
+}
+
+void PersistDragPosition(bool onRight, bool atBottom, int dx, int dy) {
+    wchar_t path[MAX_PATH + 32];
+    if (!GetButtonPosFilePath(path, ARRAYSIZE(path)))
+        return;
+
+    PersistedButtonPos data{ kButtonPosMagic, kButtonPosVersion,
+        onRight ? TRUE : FALSE, atBottom ? TRUE : FALSE, dx, dy };
+
+    HANDLE hFile = CreateFileW(path, GENERIC_WRITE, 0, nullptr,
+        CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+    if (hFile == INVALID_HANDLE_VALUE) {
+        Wh_Log(L"Failed to open button position file for writing, GLE=%d", GetLastError());
+        return;
+    }
+    DWORD written = 0;
+    WriteFile(hFile, &data, sizeof(data), &written, nullptr);
+    CloseHandle(hFile);
+}
+
+void ClearPersistedDragPosition() {
+    wchar_t path[MAX_PATH + 32];
+    if (GetButtonPosFilePath(path, ARRAYSIZE(path)))
+        DeleteFileW(path);
+}
+
+bool LoadPersistedDragPosition(bool* onRight, bool* atBottom, int* dx, int* dy) {
+    wchar_t path[MAX_PATH + 32];
+    if (!GetButtonPosFilePath(path, ARRAYSIZE(path)))
+        return false;
+
+    HANDLE hFile = CreateFileW(path, GENERIC_READ, FILE_SHARE_READ, nullptr,
+        OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+    if (hFile == INVALID_HANDLE_VALUE)
+        return false;
+
+    PersistedButtonPos data{};
+    DWORD read = 0;
+    BOOL ok = ReadFile(hFile, &data, sizeof(data), &read, nullptr);
+    CloseHandle(hFile);
+
+    if (!ok || read != sizeof(data) || data.magic != kButtonPosMagic ||
+        data.version != kButtonPosVersion)
+        return false;
+
+    *onRight  = data.onRight  != FALSE;
+    *atBottom = data.atBottom != FALSE;
+    *dx = data.dx;
+    *dy = data.dy;
+    return true;
+}
+
+// Clamps the button to the RDP monitor's full rect, derives the nearest
+// corner and (dx, dy) offset from it, and persists the result. Called on
+// drag finalize (button-up past the drag threshold, or capture loss).
+void FinalizeDragPosition(HWND hwnd) {
+    HMONITOR hMon = GetRdpMonitor();
+    // Matches CreateOrRepositionButton's reference rect (mi.rcMonitor, not
+    // rcWork) so the offset computed here reproduces the same on-screen
+    // position when reapplied — the button is meant to sit flush against
+    // the physical screen edge, same as the settings-driven default.
+    MONITORINFO mi = { sizeof(mi) };
+    RECT mon = (hMon && GetMonitorInfoW(hMon, &mi))
+        ? mi.rcMonitor
+        : RECT{ 0, 0, GetSystemMetrics(SM_CXSCREEN), GetSystemMetrics(SM_CYSCREEN) };
+
+    UINT dpiX = 96, dpiY = 96;
+    if (hMon && FAILED(GetDpiForMonitor(hMon, MDT_EFFECTIVE_DPI, &dpiX, &dpiY))) {
+        dpiX = 96; dpiY = 96;
+    }
+
+    RECT rc;
+    GetWindowRect(hwnd, &rc);
+    int w = rc.right - rc.left;
+    int h = rc.bottom - rc.top;
+
+    int x = rc.left, y = rc.top;
+    if (x < mon.left) x = mon.left;
+    if (y < mon.top) y = mon.top;
+    if (x + w > mon.right)  x = mon.right  - w;
+    if (y + h > mon.bottom) y = mon.bottom - h;
+
+    if (x != rc.left || y != rc.top) {
+        pOrigSetWindowPos(hwnd, nullptr, x, y, 0, 0,
+            SWP_NOZORDER | SWP_NOSIZE | SWP_NOACTIVATE);
+    }
+
+    int centerX = x + w / 2;
+    int centerY = y + h / 2;
+    bool onRight  = centerX > (mon.left + mon.right)  / 2;
+    bool atBottom = centerY > (mon.top  + mon.bottom) / 2;
+
+    int dxPx = onRight  ? (mon.right  - (x + w)) : (x - mon.left);
+    int dyPx = atBottom ? (mon.bottom - (y + h)) : (y - mon.top);
+    int dx = MulDiv(dxPx, 96, dpiX);
+    int dy = MulDiv(dyPx, 96, dpiY);
+
+    EnterCriticalSection(&g_cs);
+    g_hasDragPos   = true;
+    g_dragOnRight  = onRight;
+    g_dragAtBottom = atBottom;
+    g_dragDx       = dx;
+    g_dragDy       = dy;
+    LeaveCriticalSection(&g_cs);
+
+    PersistDragPosition(onRight, atBottom, dx, dy);
+
+    Wh_Log(L"Button drag finalized: onRight=%d atBottom=%d dx=%d dy=%d",
+        (int)onRight, (int)atBottom, dx, dy);
 }
 
 // ── Hostname ──────────────────────────────────────────────────────────────
@@ -309,6 +476,14 @@ LRESULT CALLBACK BBarSubclassProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
 // ── Disconnect button window ──────────────────────────────────────────────
 
 HWND g_hBtn = nullptr;
+
+// Click/drag disambiguation state. Only ever touched on the helper thread
+// (the thread that owns g_hBtn and runs its message loop), so — like g_hBtn
+// itself — these need no synchronization.
+bool  g_btnPotentialDrag = false;
+bool  g_btnDragging      = false;
+POINT g_btnDragStart     = {};  // screen coords of the WM_LBUTTONDOWN
+POINT g_btnWindowStart   = {};  // window top-left (screen coords) at grab time
 
 LRESULT CALLBACK BtnWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     switch (msg) {
@@ -403,11 +578,41 @@ LRESULT CALLBACK BtnWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     }
 
     case WM_LBUTTONDOWN: {
-        HWND hRef;
-        EnterCriticalSection(&g_cs);
-        hRef = g_hBBar ? g_hBBar : hwnd;
-        LeaveCriticalSection(&g_cs);
-        DisconnectSession(hRef);
+        SetCapture(hwnd);
+        g_btnPotentialDrag = true;
+        g_btnDragging = false;
+
+        POINT pt = { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
+        ClientToScreen(hwnd, &pt);
+        g_btnDragStart = pt;
+
+        RECT rc;
+        GetWindowRect(hwnd, &rc);
+        g_btnWindowStart = { rc.left, rc.top };
+        return 0;
+    }
+
+    case WM_LBUTTONUP: {
+        bool wasDragging  = g_btnDragging;
+        bool wasPotential = g_btnPotentialDrag;
+        ReleaseCapture(); // synchronously sends WM_CAPTURECHANGED, which
+                           // finalizes the drag and resets both flags
+        if (!wasDragging && wasPotential) {
+            HWND hRef;
+            EnterCriticalSection(&g_cs);
+            hRef = g_hBBar ? g_hBBar : hwnd;
+            LeaveCriticalSection(&g_cs);
+            DisconnectSession(hRef);
+        }
+        return 0;
+    }
+
+    case WM_CAPTURECHANGED: {
+        if (g_btnDragging) {
+            g_btnDragging = false;
+            FinalizeDragPosition(hwnd);
+        }
+        g_btnPotentialDrag = false;
         return 0;
     }
 
@@ -423,6 +628,29 @@ LRESULT CALLBACK BtnWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     }
 
     case WM_MOUSEMOVE:
+        if (g_btnPotentialDrag || g_btnDragging) {
+            POINT pt = { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
+            ClientToScreen(hwnd, &pt);
+            int totalDx = pt.x - g_btnDragStart.x;
+            int totalDy = pt.y - g_btnDragStart.y;
+
+            if (!g_btnDragging) {
+                int absDx = totalDx < 0 ? -totalDx : totalDx;
+                int absDy = totalDy < 0 ? -totalDy : totalDy;
+                if (absDx > GetSystemMetrics(SM_CXDRAG) ||
+                    absDy > GetSystemMetrics(SM_CYDRAG)) {
+                    g_btnDragging = true;
+                    g_btnPotentialDrag = false;
+                }
+            }
+
+            if (g_btnDragging) {
+                pOrigSetWindowPos(hwnd, nullptr,
+                    g_btnWindowStart.x + totalDx, g_btnWindowStart.y + totalDy,
+                    0, 0, SWP_NOZORDER | SWP_NOSIZE | SWP_NOACTIVATE);
+            }
+        }
+
         if (g_fadeWhenIdle) {
             KillTimer(hwnd, FADE_TIMER_ID);
             SetLayeredWindowAttributes(hwnd, 0, ALPHA_FULL, LWA_ALPHA);
@@ -444,7 +672,7 @@ LRESULT CALLBACK BtnWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         return 0;
 
     case WM_SETCURSOR:
-        SetCursor(LoadCursorW(nullptr, IDC_HAND));
+        SetCursor(LoadCursorW(nullptr, g_btnDragging ? IDC_SIZEALL : IDC_HAND));
         return TRUE;
 
     case WM_DISPLAYCHANGE: {
@@ -478,10 +706,33 @@ void CreateOrRepositionButton() {
 
     int scaledW = MulDiv(BTN_W, dpiX, 96);
     int scaledH = MulDiv(BTN_H, dpiY, 96);
-    int scaledOffset = MulDiv(g_buttonOffset, dpiX, 96);
 
-    int btnX = g_buttonOnRight  ? (mon.right - scaledW)                : mon.left;
-    int btnY = g_buttonAtBottom ? (mon.bottom - scaledH - scaledOffset): (mon.top + scaledOffset);
+    // A dragged position (corner + two-axis offset) overrides the
+    // settings-derived default when one has been persisted. The default
+    // path (dx=0, dy=g_buttonOffset) reproduces the original flush-edge,
+    // vertical-offset-only placement exactly.
+    bool hasDragPos;
+    bool onRight, atBottom;
+    int  offsetDx, offsetDy;
+    EnterCriticalSection(&g_cs);
+    hasDragPos = g_hasDragPos;
+    onRight    = g_dragOnRight;
+    atBottom   = g_dragAtBottom;
+    offsetDx   = g_dragDx;
+    offsetDy   = g_dragDy;
+    LeaveCriticalSection(&g_cs);
+    if (!hasDragPos) {
+        onRight  = g_buttonOnRight;
+        atBottom = g_buttonAtBottom;
+        offsetDx = 0;
+        offsetDy = g_buttonOffset;
+    }
+
+    int scaledDx = MulDiv(offsetDx, dpiX, 96);
+    int scaledDy = MulDiv(offsetDy, dpiY, 96);
+
+    int btnX = onRight  ? (mon.right  - scaledW - scaledDx) : (mon.left + scaledDx);
+    int btnY = atBottom ? (mon.bottom - scaledH - scaledDy) : (mon.top  + scaledDy);
 
     Wh_Log(L"Button: x=%d y=%d w=%d h=%d (monitor %d,%d-%d,%d)",
         btnX, btnY, scaledW, scaledH,
@@ -700,6 +951,20 @@ BOOL Wh_ModInit() {
     InitializeCriticalSection(&g_cs);
     LoadSettings();
 
+    bool dragOnRight, dragAtBottom;
+    int  dragDx, dragDy;
+    if (LoadPersistedDragPosition(&dragOnRight, &dragAtBottom, &dragDx, &dragDy)) {
+        EnterCriticalSection(&g_cs);
+        g_hasDragPos   = true;
+        g_dragOnRight  = dragOnRight;
+        g_dragAtBottom = dragAtBottom;
+        g_dragDx       = dragDx;
+        g_dragDy       = dragDy;
+        LeaveCriticalSection(&g_cs);
+        Wh_Log(L"Loaded persisted button position: onRight=%d atBottom=%d dx=%d dy=%d",
+            (int)dragOnRight, (int)dragAtBottom, dragDx, dragDy);
+    }
+
     Wh_SetFunctionHook(
         reinterpret_cast<void*>(CreateWindowExW),
         reinterpret_cast<void*>(CreateWindowExW_Hook),
@@ -731,8 +996,24 @@ BOOL Wh_ModInit() {
 }
 
 void Wh_ModSettingsChanged() {
-    bool prevButton = g_showButton;
+    bool prevButton   = g_showButton;
+    bool prevOnRight  = g_buttonOnRight;
+    bool prevAtBottom = g_buttonAtBottom;
+    int  prevOffset   = g_buttonOffset;
+
     LoadSettings();
+
+    // buttonPosition, offsetPreset, and offsetCustom all funnel into these
+    // three derived values — if none of them changed, the settings-driven
+    // default didn't change either, so there's nothing to reset.
+    if (g_buttonOnRight != prevOnRight || g_buttonAtBottom != prevAtBottom ||
+        g_buttonOffset != prevOffset) {
+        EnterCriticalSection(&g_cs);
+        g_hasDragPos = false;
+        LeaveCriticalSection(&g_cs);
+        ClearPersistedDragPosition();
+        Wh_Log(L"Button position settings changed — cleared dragged position");
+    }
 
     if (prevButton || g_showButton) {
         StopHelperThread();

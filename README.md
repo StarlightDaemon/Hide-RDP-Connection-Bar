@@ -6,7 +6,7 @@
 
 A [Windhawk](https://windhawk.net/) mod that permanently hides the floating Remote Desktop connection bar in fullscreen sessions on Windows 11. The native options to keep the bar hidden often fail to persist in Windows 11 — this mod handles it at the process level so it stays gone.
 
-Optionally provides a clean, DPI-aware disconnect button pinned to any corner of the screen, complete with idle-fading, hostname display, and a customizable global hotkey. Fully multi-monitor aware.
+Optionally provides a clean, DPI-aware disconnect button pinned to any corner of the screen, complete with idle-fading, hostname display, and a customizable global hotkey. The button can also be dragged to any position, which persists across reconnects. Fully multi-monitor aware.
 
 ---
 
@@ -33,11 +33,13 @@ The mod hooks four Win32 APIs inside `mstsc.exe`:
 
 All original calls are allowed to complete normally — the mod intercepts after the fact rather than blocking. This avoids any risk of destabilizing the RDP client.
 
-The disconnect button is a separate floating window (`WS_POPUP | WS_EX_LAYERED | WS_EX_TOPMOST`) created on a dedicated helper thread, pinned to whichever corner you choose on the monitor hosting the RDP session.
+The disconnect button is a separate floating window (`WS_POPUP | WS_EX_LAYERED | WS_EX_TOPMOST`) created on a dedicated helper thread, pinned to whichever corner you choose on the monitor hosting the RDP session. Click and drag the button to reposition it anywhere on screen — the dragged position persists across reconnects. Changing the `buttonPosition`, `offsetPreset`, or `offsetCustom` setting in the Windhawk UI resets it back to the configured default.
 
 ---
 
 ## Installation
+
+> Requires Windhawk 1.6 or later — earlier versions lack the `Wh_GetModStoragePath` API used to persist the dragged button position.
 
 1. Install [Windhawk](https://windhawk.net/)
 2. Open Windhawk → **Create new mod**
