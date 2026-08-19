@@ -264,6 +264,18 @@ HMONITOR GetRdpMonitor() {
         : MonitorFromPoint({0, 0}, MONITOR_DEFAULTTOPRIMARY);
 }
 
+// Constrains a w×h rect at (x, y) to stay fully within mon, preferring to
+// keep the top-left corner in bounds first. Shared by the live WM_MOUSEMOVE
+// drag-follow code and FinalizeDragPosition's end-of-drag safety net so both
+// clamp against the same math.
+POINT ClampToMonitorRect(int x, int y, int w, int h, const RECT& mon) {
+    if (x < mon.left) x = mon.left;
+    if (y < mon.top) y = mon.top;
+    if (x + w > mon.right)  x = mon.right  - w;
+    if (y + h > mon.bottom) y = mon.bottom - h;
+    return { x, y };
+}
+
 // ── Button position persistence ─────────────────────────────────────────────
 
 struct PersistedButtonPos {
@@ -373,11 +385,8 @@ void FinalizeDragPosition(HWND hwnd) {
     int w = rc.right - rc.left;
     int h = rc.bottom - rc.top;
 
-    int x = rc.left, y = rc.top;
-    if (x < mon.left) x = mon.left;
-    if (y < mon.top) y = mon.top;
-    if (x + w > mon.right)  x = mon.right  - w;
-    if (y + h > mon.bottom) y = mon.bottom - h;
+    POINT clamped = ClampToMonitorRect(rc.left, rc.top, w, h, mon);
+    int x = clamped.x, y = clamped.y;
 
     if (x != rc.left || y != rc.top) {
         pOrigSetWindowPos(hwnd, nullptr, x, y, 0, 0,
@@ -645,8 +654,26 @@ LRESULT CALLBACK BtnWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
             }
 
             if (g_btnDragging) {
-                pOrigSetWindowPos(hwnd, nullptr,
+                RECT rc;
+                GetWindowRect(hwnd, &rc);
+                int w = rc.right - rc.left;
+                int h = rc.bottom - rc.top;
+
+                // Same monitor reference as FinalizeDragPosition (the RDP
+                // frame's monitor via GetRdpMonitor(), not the cursor's
+                // current monitor) so the live clamp and the end-of-drag
+                // clamp never disagree and cause a snap-back.
+                HMONITOR hMon = GetRdpMonitor();
+                MONITORINFO mi = { sizeof(mi) };
+                RECT mon = (hMon && GetMonitorInfoW(hMon, &mi))
+                    ? mi.rcMonitor
+                    : RECT{ 0, 0, GetSystemMetrics(SM_CXSCREEN), GetSystemMetrics(SM_CYSCREEN) };
+
+                POINT clamped = ClampToMonitorRect(
                     g_btnWindowStart.x + totalDx, g_btnWindowStart.y + totalDy,
+                    w, h, mon);
+
+                pOrigSetWindowPos(hwnd, nullptr, clamped.x, clamped.y,
                     0, 0, SWP_NOZORDER | SWP_NOSIZE | SWP_NOACTIVATE);
             }
         }
