@@ -63,6 +63,24 @@ Enable the disconnect button in Windhawk settings before running these checks.
 
 ---
 
+## Taskbar Thumbnail Toolbar
+
+Enable the disconnect button (`showButton`) before running these checks — the
+taskbar controls ship as part of the same setting. Unlike the rest of this
+protocol, the windowed-session checks here require a session that was started
+windowed and never entered fullscreen.
+
+- [ ] Hovering the mstsc taskbar icon shows Minimize / Restore / Disconnect buttons under the thumbnail for a fullscreen session
+- [ ] The same three buttons appear for a windowed session that never entered fullscreen (no connection bar ever existed)
+- [ ] Minimize button minimizes the session; Restore button restores it; Disconnect button disconnects it
+- [ ] While the session is minimized, Minimize is disabled (dimmed) and Restore is enabled; while not minimized, the reverse — including after external transitions (minimize by clicking the taskbar icon, restore by clicking the thumbnail), verified by hovering again
+- [ ] Kill and restart `explorer.exe`, then hover the taskbar icon again — the three buttons reappear and still work
+- [ ] Glyphs are legible against the flyout background in both Windows light and dark taskbar themes
+- [ ] With the toolbar active, bar hiding and the overlay button behave exactly as before in a fullscreen session
+- [ ] Disabling the mod (uninit) with a session running leaves mstsc stable; the thumbnail buttons disappear (hidden) and no longer act
+
+---
+
 ## Hotkey
 
 Enable the disconnect hotkey in Windhawk settings before running these checks.
